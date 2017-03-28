@@ -3,6 +3,7 @@
 #include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
+#include <ESP8266mDNS.h>
 
 //needed for library
 #include <DNSServer.h>
@@ -48,10 +49,20 @@ const int DIGITAL_PIN = 12; // Digital pin to be read
 
 //define your default values here, if there are different values in config.json, they are overwritten.
 //length should be max size + 1 
+//iot2better
+/*
+const char* fingerprint = "93:E6:74:63:96:C4:B2:B0:B2:BA:F3:7D:12:6D:51:C4:76:E5:D7:0E";
 char mqtt_server[40]= "iot2better.iptime.org";
 char mqtt_port[6] = "8883";
 char mqtt_user_id[10] = "yiorange";
 char mqtt_user_pwd[10] = "yiorange";
+*/
+//iot2ym
+const char* fingerprint = "30:06:C1:0B:38:46:A5:01:E9:5E:76:64:51:36:71:FA:20:B3:A7:7D";
+char mqtt_server[40]= "iot2ym.iptime.org";
+char mqtt_port[6] = "8883";
+char mqtt_user_id[10] = "yipine";
+char mqtt_user_pwd[10] = "yipine";
 
 //char blynk_token[33] = "8fa7f712af4648f9b7f4add8e3e2b015";
 //default custom static IP
@@ -63,13 +74,7 @@ char static_dns[16];// = "168.126.63.1";
 
 //flag for saving data
 bool shouldSaveConfig = false;
-/*
-char * MQTT_SERVER = "iot2ym.iptime.org";
-int MQTT_PORT = 8883;
-char * MQTT_USER_ID = "yipine";
-char * MQTT_USER_PWD = "yipine";
-String clientName;
-*/
+
 
 char * MQTT_SERVER = mqtt_server;
 int MQTT_PORT = 8883;
@@ -86,7 +91,7 @@ unsigned long mqttTry = 0;
 unsigned long tempTry = 0;
 
 char* topic_r = "/TEMP_r";
-char* topic_s = "/TEMP";
+char* topic_s = "/TEMP_s";
 char* do_update_fw = "/do_update_fw";
 char* do_reboot = "/do_reboot";
 char* do_reset = "/do_reset";
@@ -100,11 +105,6 @@ long lastReconnectAttempt = 0;
 long lastMsg = 0;
 int test_para = 2000;
 unsigned long startMills;
-
-//iot2better
-const char* fingerprint = "93:E6:74:63:96:C4:B2:B0:B2:BA:F3:7D:12:6D:51:C4:76:E5:D7:0E";
-//iot2ym
-//const char* fingerprint = "30:06:C1:0B:38:46:A5:01:E9:5E:76:64:51:36:71:FA:20:B3:A7:7D";
 
 WiFiClientSecure wifiClient;
 
@@ -177,11 +177,11 @@ boolean reconnect() {
     Serial.print("Attempting MQTT connection...");
     // Create a random client ID
 /*
-	Serial.print("Attempting MQTT MQTT_USER_ID...");
-	Serial.print(MQTT_USER_ID);
-	Serial.print(MQTT_USER_PWD);
-	Serial.print(clientName.c_str());
-	Serial.print("Attempting MQTT MQTT_USER_PWD...");
+  Serial.print("Attempting MQTT MQTT_USER_ID...");
+  Serial.print(MQTT_USER_ID);
+  Serial.print(MQTT_USER_PWD);
+  Serial.print(clientName.c_str());
+  Serial.print("Attempting MQTT MQTT_USER_PWD...");
 */
     // Attempt to connect
     //if (client.connect(clientId.c_str())) {
@@ -210,7 +210,7 @@ boolean reconnect() {
         // Wait 5 seconds before retrying
         delay(5000);
     }
-	server.handleClient();                                  // checks for incoming messages
+  server.handleClient();                                  // checks for incoming messages
   }
     return mqttClient.connected();
 }
@@ -270,8 +270,8 @@ void handle_msg()
     ESP.reset();
     }
   else if (msg == do_format) {
-	digitalWrite(ESP_LED, LOW);
-	SPIFFS.format();
+  digitalWrite(ESP_LED, LOW);
+  SPIFFS.format();
     delay(5000);
     ESP.reset();
   }
@@ -490,6 +490,27 @@ void setup() {
   verifyFingerprint();
   delay(3000); 
 
+  // Set up mDNS responder:
+  // - first argument is the domain name, in this example
+  //   the fully-qualified domain name is "esp8266.local"
+  // - second argument is the IP address to advertise
+  //   we send our IP address on the WiFi network
+  if (!MDNS.begin("io2life")) {
+    Serial.println("Error setting up MDNS responder!");
+    while(1) { 
+      delay(1000);
+    }
+  }
+  Serial.println("mDNS responder started");
+  
+  // Start TCP (HTTP) server
+  server.begin();
+  Serial.println("TCP server started");
+  
+  // Add service to MDNS-SD
+  MDNS.addService("http", "tcp", 80);
+
+  
   // Set up the endpoints for HTTP server,  Endpoints can be written as inline functions:
   server.on("/", []()
   {
@@ -754,13 +775,13 @@ void verifyFingerprint() {
   WiFiManager wifiManager;
 
   if (! wifiClient.connect(MQTT_SERVER, MQTT_PORT)) {
-	Serial.println(MQTT_SERVER);
-	Serial.println(MQTT_PORT);
+  Serial.println(MQTT_SERVER);
+  Serial.println(MQTT_PORT);
 
     Serial.println("MQTT Connection failed. Halting execution.");
-	wifiManager.resetSettings();
-	wifiManager.startConfigPortal("AutoConnectAP","password");
-	
+  wifiManager.resetSettings();
+  wifiManager.startConfigPortal("AutoConnectAP","password");
+  
     //while(1);
   }
 
@@ -768,8 +789,8 @@ void verifyFingerprint() {
     Serial.println("Connection secure.");
   } else {
     Serial.println("verify Connection insecure! Halting execution.");
-	wifiManager.resetSettings();
-	wifiManager.startConfigPortal("AutoConnectAP","password");
+  wifiManager.resetSettings();
+  wifiManager.startConfigPortal("AutoConnectAP","password");
 
     //while(1);
   }

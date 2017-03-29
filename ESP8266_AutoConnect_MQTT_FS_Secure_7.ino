@@ -50,20 +50,21 @@ const int DIGITAL_PIN = 12; // Digital pin to be read
 //define your default values here, if there are different values in config.json, they are overwritten.
 //length should be max size + 1 
 //iot2better
-/*
-const char* fingerprint = "93:E6:74:63:96:C4:B2:B0:B2:BA:F3:7D:12:6D:51:C4:76:E5:D7:0E";
+//const char* fingerprint = "93:E6:74:63:96:C4:B2:B0:B2:BA:F3:7D:12:6D:51:C4:76:E5:D7:0E";  //orangepi-one
+const char* fingerprint = "E6:E0:09:FD:2F:2F:31:85:54:F2:EA:22:14:42:D6:1A:9C:44:36:15";
 char mqtt_server[40]= "iot2better.iptime.org";
 char mqtt_port[6] = "8883";
-char mqtt_user_id[10] = "yiorange";
-char mqtt_user_pwd[10] = "yiorange";
-*/
+char mqtt_user_id[16] = "yimacbookpro";
+char mqtt_user_pwd[16] = "yimacbookpro";
+
+/*
 //iot2ym
 const char* fingerprint = "30:06:C1:0B:38:46:A5:01:E9:5E:76:64:51:36:71:FA:20:B3:A7:7D";
 char mqtt_server[40]= "iot2ym.iptime.org";
 char mqtt_port[6] = "8883";
-char mqtt_user_id[10] = "yipine";
-char mqtt_user_pwd[10] = "yipine";
-
+char mqtt_user_id[16] = "yipine";
+char mqtt_user_pwd[16] = "yipine";
+*/
 //char blynk_token[33] = "8fa7f712af4648f9b7f4add8e3e2b015";
 //default custom static IP
 char static_ip[16]; // = "192.168.30.200";
@@ -90,8 +91,9 @@ boolean flagMqtt = false;
 unsigned long mqttTry = 0;
 unsigned long tempTry = 0;
 
-char* topic_r = "/TEMP_r";
-char* topic_s = "/TEMP_s";
+
+String topic_r = "/r_";
+String topic_s = "/s_";
 char* do_update_fw = "/do_update_fw";
 char* do_reboot = "/do_reboot";
 char* do_reset = "/do_reset";
@@ -169,6 +171,11 @@ void mqttCallback(char* topic_r, byte* payload, unsigned int length)
     if (subCommand == do_update_fw) {
       IO2LIFThttpUpdate(updateServer, fwImage);
     }
+    else if (subCommand == do_reboot) {
+	  DBG_SERIAL.print(">> do_reboot_exe ");
+      do_reboot_exe();
+    }
+	
 }
 
 boolean reconnect() {
@@ -188,15 +195,15 @@ boolean reconnect() {
     if (mqttClient.connect(clientName.c_str(), MQTT_USER_ID, MQTT_USER_PWD)) {
         Serial.println("connected");
         // Once connected, publish an announcement...
-        //mqttClient.publish(topic_s, "hello world again...");
-        if (mqttClient.publish(topic_s, "hello world again...")) {
+        if (mqttClient.publish((char *)topic_s.c_str(), "hello world again...")) {
             DBG_SERIAL.println("publish ok2");
         }
         else {
             DBG_SERIAL.println("publish failed2");
         }
         // ... and resubscribe
-        if (mqttClient.subscribe(topic_r)) {
+		topic_r = "/" + clientName;
+        if (mqttClient.subscribe((char *)topic_r.c_str())) {
             DBG_SERIAL.println("Subscribe ok2");
         }
         else {
@@ -240,7 +247,7 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   //if you used auto generated SSID, print it
   Serial.println(myWiFiManager->getConfigPortalSSID());
   //entered config mode, make led toggle faster
-  ticker.attach(0.2, tick);
+  ticker.attach(1.5, tick);
 }
 
 void handle_msg() 
@@ -255,9 +262,7 @@ void handle_msg()
       IO2LIFThttpUpdate(updateServer, fwImage);
     }
   else if (msg == do_reboot) {
-    Serial.println("WILL reboot ESP system soon!!!!");
-    delay(5000);
-    ESP.reset();
+		do_reboot_exe();
     }
   else if (msg == do_reset) {
     Serial.println("WILL reset ESP system soon!!!!");
@@ -266,23 +271,27 @@ void handle_msg()
     //reset settings - for testing
     Serial.println("reset settings----------");
     wifiManager.resetSettings();
-    delay(5000);
-    ESP.reset();
+	do_reboot_exe();
     }
   else if (msg == do_format) {
-  digitalWrite(ESP_LED, LOW);
-  SPIFFS.format();
-    delay(5000);
-    ESP.reset();
+	digitalWrite(ESP_LED, LOW);
+	SPIFFS.format();
+	do_reboot_exe();
   }
 }
-
+void do_reboot_exe() 
+{
+    Serial.println("WILL reboot ESP system soon!!!!");
+	pinMode(0, OUTPUT);
+	digitalWrite(0, HIGH);
+    delay(5000);
+    ESP.reset();
+}
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
   Serial.println();
-  Serial.println("MQTT_PORT---------------------------------------ss");
-  Serial.println(MQTT_PORT);
+
   
   //flagWifi = false;
   flagMqtt = false;
@@ -290,7 +299,7 @@ void setup() {
   //set led pin as output
   pinMode(ESP_LED, OUTPUT);
   // start ticker with 0.5 because we start in AP mode and try to connect
-  ticker.attach(0.9, tick);
+  ticker.attach(0.5, tick);
 
   //clean FS, for testing
   //SPIFFS.format();
@@ -360,8 +369,8 @@ void setup() {
   // id/name placeholder/prompt default length
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 6);
-  WiFiManagerParameter custom_mqtt_user_id("user_id", "mqtt user id", mqtt_user_id, 10);
-  WiFiManagerParameter custom_mqtt_user_pwd("user_pwd", "mqtt user pwd", mqtt_user_pwd, 10);
+  WiFiManagerParameter custom_mqtt_user_id("user_id", "mqtt user id", mqtt_user_id, 16);
+  WiFiManagerParameter custom_mqtt_user_pwd("user_pwd", "mqtt user pwd", mqtt_user_pwd, 16);
   //WiFiManagerParameter custom_blynk_token("blynk", "blynk token", blynk_token, 34);
 
   //WiFiManager
@@ -410,6 +419,7 @@ void setup() {
   wifiManager.setAPCallback(configModeCallback);
   //--------------------------------------------------------------------------------------------------
  
+  
   //fetches ssid and pass and tries to connect
   //if it does not connect it starts an access point with the specified name
   //here  "AutoConnectAP"
@@ -479,12 +489,16 @@ void setup() {
 
   // Generate client name based on MAC address and last 8 bits of microsecond counter
   // String clientName;
-  clientName += "esp8266-";
-  uint8_t mac[6];
-  WiFi.macAddress(mac);
-  clientName += macToStr(mac);
-  clientName += "-";
-  clientName += String(micros() & 0xff, 16);
+  clientName += "Io2Life-";
+  //uint8_t mac[6];
+  //WiFi.macAddress(mac);
+  clientName += WiFi.macAddress();
+
+  //clientName += macToStr(mac);
+  //clientName += "-";
+  //clientName += String(micros() & 0xff, 16);
+	topic_s = "/s_" + clientName;
+	topic_r = "/r_" + clientName;
 
   // check the fingerprint of io.adafruit.com's SSL cert
   verifyFingerprint();
@@ -545,7 +559,7 @@ void loop() {
                     DBG_SERIAL.println("Publish failed");
                 }
 */
-                if (mqttClient.subscribe(topic_r)) {
+                if (mqttClient.subscribe((char *)topic_r.c_str())) {
                     DBG_SERIAL.println("Subscribe ok");
                 }
                 else {
@@ -572,8 +586,9 @@ void loop() {
     String pl = readFromOneWire();
     Serial.print(pl);
     Serial.println();
+    Serial.println();
 
-    if ( mqttClient.publish(topic_s, (char *)pl.c_str()) )
+    if ( mqttClient.publish((char *)topic_s.c_str(), (char *)pl.c_str()) )
         DBG_SERIAL.println("Publish Temp~ OK------------------------------>");
     else
         DBG_SERIAL.println("Publish failed.................................");

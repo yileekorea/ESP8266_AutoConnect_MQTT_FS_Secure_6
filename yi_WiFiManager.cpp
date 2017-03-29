@@ -103,7 +103,7 @@ void WiFiManager::setupConfigPortal() {
   delay(500); // Without delay I've seen the IP address blank
   DEBUG_WM(F("AP IP address: "));
   DEBUG_WM(WiFi.softAPIP());
-
+  
   /* Setup the DNS server redirecting all the domains to the apIP */
   dnsServer->setErrorReplyCode(DNSReplyCode::NoError);
   dnsServer->start(DNS_PORT, "*", WiFi.softAPIP());
@@ -120,7 +120,6 @@ void WiFiManager::setupConfigPortal() {
   server->onNotFound (std::bind(&WiFiManager::handleNotFound, this));
   server->begin(); // Web server start
   DEBUG_WM(F("HTTP server started"));
-
 }
 
 boolean WiFiManager::autoConnect() {
@@ -380,7 +379,7 @@ void WiFiManager::handleRoot() {
   page += "<h1>";
   page += _apName;
   page += "</h1>";
-  page += F("<h3>WiFiManager</h3>");
+  page += F("<h3>WiFi설정마법사</h3>");
   page += FPSTR(HTTP_PORTAL_OPTIONS);
   page += FPSTR(HTTP_END);
 
@@ -695,7 +694,8 @@ void WiFiManager::handleNotFound() {
 }
 
 
-/** Redirect to captive portal if we got a request for another domain. Return true in that case so the page handler do not try to handle the request again. */
+/** Redirect to captive portal if we got a request for another domain. 
+Return true in that case so the page handler do not try to handle the request again. */
 boolean WiFiManager::captivePortal() {
   if (!isIp(server->hostHeader()) ) {
     DEBUG_WM(F("Request redirected to captive portal"));

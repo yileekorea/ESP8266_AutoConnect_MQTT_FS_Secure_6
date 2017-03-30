@@ -121,6 +121,8 @@ WiFiClientSecure wifiClient;
 void mqttCallback(char* topic_r, byte* payload, unsigned int length);
 PubSubClient mqttClient(MQTT_SERVER, MQTT_PORT, mqttCallback, wifiClient);
 
+void sendmqttMsg(char* topictosend, String payload);
+
 //WiFiServer server(80);
 ESP8266WebServer server(80);                              // HTTP server will listen at port 80
 
@@ -254,7 +256,7 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   //if you used auto generated SSID, print it
   Serial.println(myWiFiManager->getConfigPortalSSID());
   //entered config mode, make led toggle faster
-  ticker.attach(2.0, tick);
+  ticker.attach(1.5, tick);
 }
 
 void handle_msg() 
@@ -595,13 +597,15 @@ void loop() {
     String pl = readFromOneWire();
     Serial.print(pl);
     Serial.println();
-    Serial.println();
+    Serial.println();	
 
+	sendmqttMsg((char *)topic_s.c_str(), (char *)pl.c_str());
+/*
     if ( mqttClient.publish((char *)topic_s.c_str(), (char *)pl.c_str()) )
         DBG_SERIAL.println("Publish Temp~ OK------------------------------>");
     else
         DBG_SERIAL.println("Publish failed.................................");
-   
+*/   
     tempTry = millis();
   }
 
@@ -616,7 +620,7 @@ void loop() {
   server.handleClient();                                  // checks for incoming messages
 
 }
-/*
+
 void sendmqttMsg(char* topictosend, String payload)
 {
 
@@ -638,20 +642,20 @@ void sendmqttMsg(char* topictosend, String payload)
 
     if ( mqttClient.publish(topictosend, p, msg_length)) {
       if (DEBUG_PRINT) {
-        Serial.println("Publish ok");
+        Serial.println("Publish length TEMP ok");
       }
       free(p);
       //return 1;
     } else {
       if (DEBUG_PRINT) {
-        Serial.println("Publish failed");
+        Serial.println("Publish length TEMP failed");
       }
       free(p);
       //return 0;
     }
   }
 }
-*/
+
 /*
  * Temperature measurement
  */
@@ -755,6 +759,8 @@ String readFromOneWire()
     
     //id[numSensor] = numSensor+1;
     celsius[numSensor] = (float)raw / 16.0;
+	Serial.println(celsius[numSensor]);
+
     fahrenheit[numSensor] = celsius[numSensor] * 1.8 + 32.0;
     //Serial.print("  ID = ");
     //Serial.print(id[numSensor]);
@@ -772,16 +778,22 @@ String readFromOneWire()
     delay(250);
     
     //==========================================================
-	numSensor = 8;
+	//numSensor = 7;
+	char pChrBuffer[5];
     for ( i = 0; i < numSensor ; i++) {
-        float f = celsius[i]; //first ~ numSensor one-wire temperature celsius
+//        float f = celsius[i]; //first ~ numSensor one-wire temperature celsius
+//		Serial.println(pChrBuffer);
         
         // celsius based first sensor
-        if ( isnan(f) )
+        //if ( isnan(f) )
+        if ( isnan(celsius[i]) )
             payload += "0";
-        else
-            payload += f;   // *C
-            
+        else {
+			dtostrf(celsius[i] , 3, 1, pChrBuffer);
+            //payload += f;   // *C
+            payload += pChrBuffer;   // *C
+		}
+
         if(i == (numSensor-1))
             payload += "}";
         else{

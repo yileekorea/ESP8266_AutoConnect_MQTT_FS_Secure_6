@@ -20,7 +20,7 @@
 #define DBG_SERIAL      Serial
 #define DEBUG_PRINT 1
 
-OneWire  ds(2);  // on pin 2 (a 4.7K resistor is necessary)
+//OneWire  ds(2);  // on pin 2 (a 4.7K resistor is necessary)
 
 String clientName;
 //String inString;
@@ -172,10 +172,10 @@ void mqttCallback(char* topic_r, byte* payload, unsigned int length)
       IO2LIFThttpUpdate(updateServer, fwImage);
     }
     else if (subCommand == do_reboot) {
-	  DBG_SERIAL.print(">> do_reboot_exe ");
+    DBG_SERIAL.print(">> do_reboot_exe ");
       do_reboot_exe();
     }
-	
+  
 }
 
 boolean reconnect() {
@@ -202,7 +202,7 @@ boolean reconnect() {
             DBG_SERIAL.println("publish failed2");
         }
         // ... and resubscribe
-		topic_r = "/" + clientName;
+    topic_r = "/" + clientName;
         if (mqttClient.subscribe((char *)topic_r.c_str())) {
             DBG_SERIAL.println("Subscribe ok2");
         }
@@ -262,7 +262,7 @@ void handle_msg()
       IO2LIFThttpUpdate(updateServer, fwImage);
     }
   else if (msg == do_reboot) {
-		do_reboot_exe();
+    do_reboot_exe();
     }
   else if (msg == do_reset) {
     Serial.println("WILL reset ESP system soon!!!!");
@@ -271,19 +271,19 @@ void handle_msg()
     //reset settings - for testing
     Serial.println("reset settings----------");
     wifiManager.resetSettings();
-	do_reboot_exe();
+  do_reboot_exe();
     }
   else if (msg == do_format) {
-	digitalWrite(ESP_LED, LOW);
-	SPIFFS.format();
-	do_reboot_exe();
+  digitalWrite(ESP_LED, LOW);
+  SPIFFS.format();
+  do_reboot_exe();
   }
 }
 void do_reboot_exe() 
 {
     Serial.println("WILL reboot ESP system soon!!!!");
-	pinMode(0, OUTPUT);
-	digitalWrite(0, HIGH);
+  pinMode(0, OUTPUT);
+  digitalWrite(0, HIGH);
     delay(5000);
     ESP.reset();
 }
@@ -497,8 +497,8 @@ void setup() {
   //clientName += macToStr(mac);
   //clientName += "-";
   //clientName += String(micros() & 0xff, 16);
-	topic_s = "/s_" + clientName;
-	topic_r = "/r_" + clientName;
+  topic_s = "/s_" + clientName;
+  topic_r = "/r_" + clientName;
 
   // check the fingerprint of io.adafruit.com's SSL cert
   verifyFingerprint();

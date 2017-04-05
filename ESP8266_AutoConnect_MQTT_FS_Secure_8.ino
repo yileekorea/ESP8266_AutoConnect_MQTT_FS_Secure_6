@@ -59,14 +59,14 @@ char mqtt_user_pwd[10] = "yiorange";
 */
 /*
 //iot2ym
-const char* fingerprint = "30:06:C1:0B:38:46:A5:01:E9:5E:76:64:51:36:71:FA:20:B3:A7:7D";	//orange-one
+const char* fingerprint = "30:06:C1:0B:38:46:A5:01:E9:5E:76:64:51:36:71:FA:20:B3:A7:7D";  //orange-one
 char mqtt_server[40]= "iot2ym.iptime.org";
 char mqtt_port[6] = "8883";
 char mqtt_user_id[10] = "yipine";
 char mqtt_user_pwd[10] = "yipine";
 */
 //iot2better-macbook
-const char* fingerprint = "E6:E0:09:FD:2F:2F:31:85:54:F2:EA:22:14:42:D6:1A:9C:44:36:15";	//mac book
+const char* fingerprint = "E6:E0:09:FD:2F:2F:31:85:54:F2:EA:22:14:42:D6:1A:9C:44:36:15";  //mac book
 char mqtt_server[40]= "iot2better.iptime.org";
 char mqtt_port[6] = "8883";
 char mqtt_user_id[10] = "yimac";
@@ -181,10 +181,10 @@ void mqttCallback(char* topic_r, byte* payload, unsigned int length)
       IO2LIFThttpUpdate(updateServer, fwImage);
     }
     else if (subCommand == do_reboot) {
-	  DBG_SERIAL.print(">> do_reboot_exe ");
+    DBG_SERIAL.print(">> do_reboot_exe ");
       do_reboot_exe();
     }
-	
+  
 }
 
 boolean reconnect() {
@@ -211,7 +211,7 @@ boolean reconnect() {
             DBG_SERIAL.println("publish failed2");
         }
         // ... and resubscribe
-		topic_r = "/" + clientName;
+		//topic_r = "/" + clientName;
         if (mqttClient.subscribe((char *)topic_r.c_str())) {
             DBG_SERIAL.println("Subscribe ok2");
         }
@@ -240,6 +240,16 @@ String macToStr(const uint8_t* mac)
       result += ':';
   }
   return result;
+}
+void macToTopic()
+{
+  String result;
+  result = WiFi.macAddress();
+  for (int i = 0; i < 16; ) {
+	topic_s += result.substring(i, i+2);
+	topic_r += result.substring(i, i+2);
+	i +=3;
+  }
 }
 
 void tick()
@@ -271,7 +281,7 @@ void handle_msg()
       IO2LIFThttpUpdate(updateServer, fwImage);
     }
   else if (msg == do_reboot) {
-		do_reboot_exe();
+    do_reboot_exe();
     }
   else if (msg == do_reset) {
     Serial.println("WILL reset ESP system soon!!!!");
@@ -280,19 +290,19 @@ void handle_msg()
     //reset settings - for testing
     Serial.println("reset settings----------");
     wifiManager.resetSettings();
-	do_reboot_exe();
+  do_reboot_exe();
     }
   else if (msg == do_format) {
-	digitalWrite(ESP_LED, LOW);
-	SPIFFS.format();
-	do_reboot_exe();
+  digitalWrite(ESP_LED, LOW);
+  SPIFFS.format();
+  do_reboot_exe();
   }
 }
 void do_reboot_exe() 
 {
     Serial.println("WILL reboot ESP system soon!!!!");
-	pinMode(0, OUTPUT);
-	digitalWrite(0, HIGH);
+  pinMode(0, OUTPUT);
+  digitalWrite(0, HIGH);
     delay(5000);
     ESP.reset();
 }
@@ -508,8 +518,22 @@ void setup() {
   //clientName += macToStr(mac);
   //clientName += "-";
   //clientName += String(micros() & 0xff, 16);
-	topic_s = "/x_" + WiFi.macAddress();
-	topic_r = "/r_" + WiFi.macAddress();
+
+/*
+  topic_r += topic_s.substring(0, 2);
+  topic_r += topic_s.substring(3, 5);
+  topic_r += topic_s.substring(6, 8);
+  topic_r += topic_s.substring(9, 11);
+  topic_r += topic_s.substring(12, 14);
+  topic_r += topic_s.substring(15, 17);
+ */
+  macToTopic();
+  Serial.println("new MAC address");
+  Serial.println(topic_s);
+  Serial.println(topic_r);
+  
+  topic_s = "/x_" + WiFi.macAddress();
+  topic_r = "/r_" + WiFi.macAddress();
 
   // check the fingerprint of io.adafruit.com's SSL cert
   verifyFingerprint();
@@ -597,9 +621,9 @@ void loop() {
     String pl = readFromOneWire();
     Serial.print(pl);
     Serial.println();
-    Serial.println();	
+    Serial.println(); 
 
-	sendmqttMsg((char *)topic_s.c_str(), (char *)pl.c_str());
+  sendmqttMsg((char *)topic_s.c_str(), (char *)pl.c_str());
 /*
     if ( mqttClient.publish((char *)topic_s.c_str(), (char *)pl.c_str()) )
         DBG_SERIAL.println("Publish Temp~ OK------------------------------>");
@@ -661,7 +685,7 @@ void sendmqttMsg(char* topictosend, String payload)
  */
 String readFromOneWire()
 {
-	String payload = "{\"tmp1\":";
+  String payload = "{\"tmp1\":";
 
     //==========================================================
     byte numSensor = 0;
@@ -759,7 +783,7 @@ String readFromOneWire()
     
     //id[numSensor] = numSensor+1;
     celsius[numSensor] = (float)raw / 16.0;
-	Serial.println(celsius[numSensor]);
+  Serial.println(celsius[numSensor]);
 
     fahrenheit[numSensor] = celsius[numSensor] * 1.8 + 32.0;
     //Serial.print("  ID = ");
@@ -778,31 +802,31 @@ String readFromOneWire()
     delay(250);
     
     //==========================================================
-	//numSensor = 7;
-	char pChrBuffer[5];
+  //numSensor = 7;
+  char pChrBuffer[5];
     for ( i = 0; i < numSensor ; i++) {
 //        float f = celsius[i]; //first ~ numSensor one-wire temperature celsius
-//		Serial.println(pChrBuffer);
+//    Serial.println(pChrBuffer);
         
         // celsius based first sensor
         //if ( isnan(f) )
         if ( isnan(celsius[i]) )
             payload += "0";
         else {
-			dtostrf(celsius[i] , 3, 1, pChrBuffer);
+      dtostrf(celsius[i] , 3, 1, pChrBuffer);
             //payload += f;   // *C
             payload += pChrBuffer;   // *C
-		}
+    }
 
         if(i == (numSensor-1))
             payload += "}";
         else{
-			//"{\"temp_1\":";
+      //"{\"temp_1\":";
             //payload += ",\"temp\":";
             payload += ",\"tmp";
             payload += i+2;
-			payload += "\":";
-		}
+      payload += "\":";
+    }
     }
     return payload;
 }

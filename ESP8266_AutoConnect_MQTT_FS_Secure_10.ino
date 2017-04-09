@@ -631,8 +631,11 @@ void loop() {
 
     payload += ",\"id\":";
     payload += i+1;   // id
+	
+    payload += ",\"numSensor\":";
+    payload += numSensor;   // numSensor
+	
     payload += ",\"cTemps\":";
-
     if ( isnan(celsius[i]) )
 		payload += "0";
     else {

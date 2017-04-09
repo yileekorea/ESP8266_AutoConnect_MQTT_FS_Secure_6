@@ -100,6 +100,7 @@ unsigned long tempTry = 0;
 
 byte numSensor = 0;
 String sName[10];
+float old_celsius[10];
 float celsius[10];
 float rStatus[10];
 //String rStatus[10];
@@ -217,7 +218,7 @@ boolean reconnect() {
             DBG_SERIAL.println("publish failed2");
         }
         // ... and resubscribe
-		//topic_sub = "/" + clientName;
+    //topic_sub = "/" + clientName;
         if (mqttClient.subscribe((char *)topic_sub.c_str())) {
             DBG_SERIAL.println("Subscribe ok2");
         }
@@ -252,11 +253,11 @@ void macToTopic()
   String result;
   result = WiFi.macAddress();
   for (int i = 0; i < 16; ) {
-	MAC += result.substring(i, i+2);
-	i +=3;
+  MAC += result.substring(i, i+2);
+  i +=3;
   }
-	topic_pub += MAC;
-	topic_sub += MAC;
+  topic_pub += MAC;
+  topic_sub += MAC;
 }
 
 void tick()
@@ -604,7 +605,7 @@ void loop() {
                 DBG_SERIAL.println("MQTT connect failed");
             }
         }
-    server.handleClient();	// checks for incoming messages
+    server.handleClient();  // checks for incoming messages
     }
     else {
       if (!mqttClient.connected()) {
@@ -618,46 +619,46 @@ void loop() {
   if ( flagMqtt == true && (tempTry == 0 || ((millis() - tempTry) > 4000UL)) )  // 4sec
   {
     String pl = readFromOneWire();
-    Serial.print(pl);
-    Serial.println();
 
     byte i;
     for ( i = 0; i < numSensor ; i++) {
-		char pChrBuffer[5];
-		String payload = "{\"tbl_name\":";
-		//payload += ",\"tbl_name\":";
-		payload += "\"tRoomTemp_";
-		payload += MAC;
+    char pChrBuffer[5];
+    String payload = "{\"tbl_name\":";
+    //payload += "\"tRoomTemp_";
+	payload += "\"";
+    payload += MAC;
+    payload += "\"";
+
+    payload += ",\"id\":";
+    payload += i+1;   // id
+    payload += ",\"cTemps\":";
+
+    if ( isnan(celsius[i]) )
+		payload += "0";
+    else {
+		dtostrf(celsius[i] , 3, 1, pChrBuffer);
+		payload += pChrBuffer;   // *C
+    }
+
+		//"{\"temp_1\":";
+		payload += ",\"sName\":";
+		payload += "\"";
+		payload += sName[i];   // sensor name
 		payload += "\"";
 
-		payload += ",\"id\":";
-		payload += i+1;   // id
-		payload += ",\"cTemps\":";
+		//rStatus[i] = "Y";
+		payload += ",\"cStatus\":";
+		//payload += "\"";
+		payload += rStatus[i];   // room status
+		//payload += "\"";
+		payload += "}";
 
-		if ( isnan(celsius[i]) )
-            payload += "0";
-        else {
-			dtostrf(celsius[i] , 3, 1, pChrBuffer);
-            payload += pChrBuffer;   // *C
-		}
-
-			//"{\"temp_1\":";
-            payload += ",\"sName\":";
-			payload += "\"";
-            payload += sName[i];   // sensor name
-			payload += "\"";
-
-			//rStatus[i] = "Y";
-            payload += ",\"cStatus\":";
-			//payload += "\"";
-            payload += rStatus[i];   // room status
-			//payload += "\"";
-            payload += "}";
-
-			//payload += "\":";
-
+		//payload += "\":";
+	if(old_celsius[i] != celsius[i]){
 		sendmqttMsg((char *)topic_pub.c_str(), (char *)payload.c_str());
-		sName[i] = "";
+	}
+    sName[i] = "";
+	old_celsius[i] = celsius[i];
     }
 
   //sendmqttMsg((char *)topic_pub.c_str(), (char *)pl.c_str());
@@ -721,7 +722,7 @@ void sendmqttMsg(char* topictosend, String payload)
  */
 String readFromOneWire()
 {
-	String payload;
+  String payload;
 
     //byte numSensor = 0;
     byte i;
@@ -748,10 +749,10 @@ String readFromOneWire()
     for ( i = 0; i < 8; i++) {
         Serial.write(' ');
         Serial.print(addr[i], HEX);
-		sName[numSensor] += String(addr[i], HEX);
+    sName[numSensor] += String(addr[i], HEX);
     }
     //Serial.print(sName[numSensor]);
-			
+      
     if (OneWire::crc8(addr, 7) != addr[7]) {
         Serial.println("CRC is not valid!");
         return payload;
@@ -779,7 +780,7 @@ String readFromOneWire()
         
     ds.reset();
     ds.select(addr);
-    ds.write(0x44, 1);	// start conversion, with parasite power on at the end
+    ds.write(0x44, 1);  // start conversion, with parasite power on at the end
     
     //delay(1000);     // maybe 750ms is enough, maybe not
     delay(800);     // maybe 750ms is enough, maybe not
@@ -818,10 +819,9 @@ String readFromOneWire()
         else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
         //// default is 12 bit resolution, 750 ms conversion time
     }
-    
-    //id[numSensor] = numSensor+1;
+    //Serial.print("  (float)raw = ");
+    //Serial.print((float)raw);
     celsius[numSensor] = (float)raw / 16.0;
-	//Serial.println(celsius[numSensor]);
     //fahrenheit[numSensor] = celsius[numSensor] * 1.8 + 32.0;
     //Serial.print("  ID = ");
     //Serial.print(id[numSensor]);
@@ -840,33 +840,33 @@ String readFromOneWire()
     
     //==========================================================
 /*
-	//numSensor = 7;
+  //numSensor = 7;
   char pChrBuffer[5];
   byte i;
 
     for ( i = 0; i < numSensor ; i++) {
-	//float f = celsius[i]; //first ~ numSensor one-wire temperature celsius
-	//Serial.println(pChrBuffer);
+  //float f = celsius[i]; //first ~ numSensor one-wire temperature celsius
+  //Serial.println(pChrBuffer);
         // celsius based first sensor
         //if ( isnan(f) )
         if ( isnan(celsius[i]) )
             payload += "0";
         else {
-			dtostrf(celsius[i] , 3, 1, pChrBuffer);
+      dtostrf(celsius[i] , 3, 1, pChrBuffer);
             //payload += f;   // *C
             payload += pChrBuffer;   // *C
-		}
+    }
         if(i == (numSensor-1))
             payload += "}";
         else{
-			//"{\"temp_1\":";
+      //"{\"temp_1\":";
             //payload += ",\"temp\":";
             payload += ",\"tmp";
             payload += i+2;
-			payload += "\":";
-		}
+      payload += "\":";
     }
-	*/
+    }
+  */
     return payload;
 }
 

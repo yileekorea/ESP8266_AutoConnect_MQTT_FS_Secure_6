@@ -752,22 +752,11 @@ String readFromOneWire()
     byte type_s;
     byte data[12];
     byte addr[8];
-    //byte id[10];
-    //byte numSensor = 0;
-    //float celsius[10];
-    //float fahrenheit[10];
-    
-    //if ( !ds.search(addr)) {
-    //Serial.println("No more addresses.");
-    //Serial.println();
-    //ds.reset_search();
-    //delay(250);
-    //return payload;
-    //}
+
     
     while (ds.search(addr)) {
-    //    measure ();
-    Serial.print("ROM =");
+    ////    measure ();
+    //Serial.print("ROM =");
     for ( i = 0; i < 8; i++) {
         //Serial.write(' ');
         //Serial.print(addr[i], HEX);

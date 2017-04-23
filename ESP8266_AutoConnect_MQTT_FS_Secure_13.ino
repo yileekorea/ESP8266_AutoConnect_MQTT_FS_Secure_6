@@ -100,10 +100,10 @@ unsigned long tempTry = 0;
 
 byte numSensor = 0;
 String sName[10];
-float old_celsius[10];
+float old_celsius[10]= {26,26,26,26,26,26,26,26,26,26};
 float celsius[10];
 float rStatus[] = {0,0,0,0,0,0,0,0}; //room status all OFF
-float L_Temp[] = {26,26,26,26,26,26,26,26}; //main captured String 
+float L_Temp[] = {26,26,26,26,26,26,26,26}; 
 
 
 String MAC;

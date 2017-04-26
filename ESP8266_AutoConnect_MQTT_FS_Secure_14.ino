@@ -35,6 +35,8 @@ String clientName;
 //String inString;
 String subCommand;
 String updateServer_fwImage;
+String REMOTE_SERVER;
+String SKETCH_BIN;
 
 String form =                                             // String form to sent to the client-browser
   "<p>"
@@ -43,6 +45,7 @@ String form =                                             // String form to sent
   "<img src='http://iot2ym.iptime.org:8000/jtbc.jpg'>"
   "<form action='msg'><p>Type Command: <input type='text' name='msg' size=50 autofocus> <input type='submit' value='Submit'></form>"
   "</center>";
+#define BOOT_AFTER_UPDATE false
 
 //for LED status
 #include <Ticker.h>
@@ -113,13 +116,13 @@ float L_Temp[] = {26,26,26,26,26,26,26,26};
 String MAC;
 String topic_sub = "/S_";
 String topic_pub = "/P_";
-char* do_update_fw = "/do_update_fw";
+char* do_fw_update = "/do_fw_update";
 char* do_reboot = "/do_reboot";
 char* do_reset = "/do_reset";
 char* do_format = "/do_format";
 
-//char* updateServer = "http://192.168.0.2/io2life.bin";
-char* updateServer = "http://iot2ym.iptime.org:8000/";
+//char* updateServer = "http://iot2ym.iptime.org:8000/";
+char* updateServer = "http://iot2better.iptime.org:8003/fwImage/";
 char* fwImage = "io2life.bin";
 
 long lastReconnectAttempt = 0;
@@ -149,11 +152,16 @@ void io2LIFEhttpUpdate(char* updateServer, char* fwImage)
 {
   if (WiFi.status() == WL_CONNECTED) {
         updateServer_fwImage = updateServer;
-//        updateServer_fwImage += "io2life.bin";
         updateServer_fwImage += fwImage;
+		
+		REMOTE_SERVER = updateServer;
+		SKETCH_BIN = fwImage;
+
+		ESPhttpUpdate.rebootOnUpdate(BOOT_AFTER_UPDATE);
+		//ESPhttpUpdate.rebootOnUpdate(true);
 
         t_httpUpdate_return ret = ESPhttpUpdate.update(updateServer_fwImage);
-//        t_httpUpdate_return ret = ESPhttpUpdate.update("http://192.168.0.2/io2life.bin");
+        //t_httpUpdate_return ret = ESPhttpUpdate.update(REMOTE_SERVER, 443, SKETCH_BIN);
 
         switch(ret) {
             case HTTP_UPDATE_FAILED:
@@ -166,6 +174,7 @@ void io2LIFEhttpUpdate(char* updateServer, char* fwImage)
 
             case HTTP_UPDATE_OK:
                 DBG_SERIAL.println("HTTP_UPDATE_OK");
+				do_reboot_exe();
                 break;
         }
     }
@@ -186,8 +195,8 @@ void mqttCallback(char* topic_sub, byte* payload, unsigned int length)
     DBG_SERIAL.print(">> Topic: ");
     DBG_SERIAL.print(topic_sub);
 
-    //DBG_SERIAL.print(">> Payload: ");
-    //DBG_SERIAL.println(buffer);
+    DBG_SERIAL.print(">> Payload: ");
+    DBG_SERIAL.println(buffer);
 	
 	char * pch=0;
 	//printf ("Looking for the ':' chars in \"%s\"...\n",buffer);
@@ -208,12 +217,12 @@ void mqttCallback(char* topic_sub, byte* payload, unsigned int length)
 	}
 	else {
 		subCommand = String(buffer);
-		if (subCommand == do_update_fw) {
-			//DBG_SERIAL.print(">> do_update_fw_exe ");
+		if (subCommand == do_fw_update) {
+			DBG_SERIAL.print(">> do_fw_update_exe ");
 			io2LIFEhttpUpdate(updateServer, fwImage);
 		}
 		else if (subCommand == do_reboot) {
-			//DBG_SERIAL.print(">> do_reboot_exe ");
+			DBG_SERIAL.print(">> do_reboot_exe ");
 			do_reboot_exe();
 		}
 	}
@@ -310,7 +319,7 @@ void handle_msg()
   Serial.println(msg);
   Serial.println(' ');                                  // new line in monitor
 
-  if (msg == do_update_fw) {
+  if (msg == do_fw_update) {
       io2LIFEhttpUpdate(updateServer, fwImage);
     }
   else if (msg == do_reboot) {
@@ -715,12 +724,12 @@ void loop() {
 
   for (int i = 1; i < 15; i++) {
     mcp.gpioDigitalWrite(i, HIGH);
-    delay(10);
+    delay(100);
   }
 
   for (int i = 1; i < 15; i++) {
     mcp.gpioDigitalWrite(i, LOW);
-    delay(10);
+    delay(100);
   } 
 
 }

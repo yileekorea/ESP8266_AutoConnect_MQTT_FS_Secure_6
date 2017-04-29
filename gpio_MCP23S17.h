@@ -58,8 +58,7 @@ A2,A1,A0 tied to ground = 0x20
 #ifndef _GPIO_MCP23S17_H_
 #define _GPIO_MCP23S17_H_
 
-
-#include <inttypes.h>
+//#include <inttypes.h>
 
 #include <SPI.h>//this chip needs SPI
 
@@ -111,22 +110,18 @@ INTPOL: (This bit sets the polarity of the INT output pin)
 */
 
 #include "_includes/MCP23S17_registers.h"
-	
+/*	
 #if defined(ESP8266)
 	#include <eagle_soc.h>
 #endif
-
+*/
 class gpio_MCP23S17 {
 
 public:
 	
-	#if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MKL26Z64__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
-	gpio_MCP23S17(const uint8_t csPin,const uint8_t haenAdrs,const uint8_t mosi_pin=11,const uint8_t sclk_pin=13,const uint8_t miso_pin=12);//any pin,0x20....0x27
-	void 			postSetup(const uint8_t csPin,const uint8_t haenAdrs,const uint8_t mosi_pin=11,const uint8_t sclk_pin=13,const uint8_t miso_pin=12);//used with other libraries only
-	#else
+
 	gpio_MCP23S17(const uint8_t csPin,const uint8_t haenAdrs);//any pin,0x20....0x27
 	void 			postSetup(const uint8_t csPin,const uint8_t haenAdrs);//used with other libraries only
-	#endif
 	gpio_MCP23S17();//For include inside other libraries
 
 	void 			begin(bool protocolInitOverride=false); //protocolInitOverride=true	will not init the SPI	
@@ -138,6 +133,7 @@ public:
 	uint16_t 		readGpioPort();								//read the state of the pins (all)
 	uint16_t 		readGpioPortFast();							
 	
+	void 			gpioDigitalWrite(uint8_t value);  //write data to one pin
 	void 			gpioDigitalWrite(uint8_t pin, bool value);  //write data to one pin
 	void			gpioDigitalWriteFast(uint8_t pin, bool value);
 	int 			gpioDigitalRead(uint8_t pin);				//read data from one pin
@@ -161,23 +157,41 @@ protected:
 	inline __attribute__((always_inline))
 	void _GPIOstartSend(bool mode) {
 	#if defined (SPI_HAS_TRANSACTION)
-		SPI.beginTransaction(SPISettings(_MCPMaxSpeed, MSBFIRST, SPI_MODE0));
+		//DEBUG_MCP("_STARTSend-0");
+		//SPI.beginTransaction(SPISettings(_MCPMaxSpeed, MSBFIRST, SPI_MODE0));
 	#endif
 	#if defined(ESP8266)
-		GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, _pinRegister(_cs));//L
+		//DEBUG_MCP("_STARTSend");
+		digitalWrite(_cs, LOW);
+		delay(1);
+
+		//GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, _pinRegister(_cs));//L
 	#elif defined(__FASTWRITE)
 		digitalWriteFast(_cs, LOW);
 	#else
 		digitalWrite(_cs, LOW);
 	#endif
-		mode == 1 ? SPI.transfer(_readCmd) : SPI.transfer(_writeCmd);
+//		mode == 1 ? SPI.transfer(_readCmd) : SPI.transfer(_writeCmd);
+//		mode == 1 ? SPI.write(_readCmd) : SPI.write(_writeCmd);
+		if(mode == 1 ){
+			SPI.write(_readCmd);
+			//DEBUG_MCP(_readCmd);
+		} else{
+			SPI.write(_writeCmd);
+			//DEBUG_MCP(_writeCmd);
+		
+		}
+		delay(1);
+
 	}
 	
 	
 	inline __attribute__((always_inline))
 	void _GPIOendSend(void){
 	#if defined(ESP8266)
-		GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, _pinRegister(_cs));//H
+		//DEBUG_MCP("_ENDSend");
+		//GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, _pinRegister(_cs));//H
+		digitalWrite(_cs, HIGH);
 	#elif defined(__FASTWRITE)
 		digitalWriteFast(_cs, HIGH);
 	#else
@@ -185,15 +199,22 @@ protected:
 	#endif
 
 	#if defined (SPI_HAS_TRANSACTION)
-		SPI.endTransaction();
+		//SPI.endTransaction();
 	#endif
 	}
 	
 	inline __attribute__((always_inline))
 	void _GPIOwriteByte(byte addr, byte data){
 		_GPIOstartSend(0);
-		SPI.transfer(addr);
-		SPI.transfer(data);
+		//SPI.transfer(addr);
+		//SPI.transfer(data);
+		
+		//DEBUG_MCP("_GPIOwriteByte");
+		//DEBUG_MCP(addr);
+		//DEBUG_MCP(data);
+
+		SPI.write(addr);
+		SPI.write(data);
 		_GPIOendSend();
 	}
 	
@@ -218,8 +239,11 @@ protected:
 		return _BV(pin);
 	}
 	#endif
+
+    boolean       _debug = true;
 	
-	
+    template <typename Generic>
+    void          DEBUG_MCP(Generic text);	
 	
 private:
     uint8_t 		_cs;
